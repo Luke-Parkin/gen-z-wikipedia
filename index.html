@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html>
+   <header>
+      <title>
+         Gen Z Wikipedia
+      </title>
+      <style>
+         .video-container {
+         position: relative;
+         overflow: hidden;
+         width: 100%;
+         padding-top: 75%;
+         }
+         .video-frame {
+         position: absolute;
+         top: 50%;
+         left: 50%;
+         width: 100%;
+         height: 100%;
+         transform: translate(-50%, -50%) scale(1.77);
+         overflow: hidden;
+         }
+         .video-frame iframe {
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         }
+         .overlay {
+         position: absolute;
+         top: 0;
+         left: 0;
+         width: 100%;
+         height: 100%;
+         display: flex;
+         justify-content: center;
+         align-items: center;
+         }
+         .textbox {
+         width: 35%; 
+         padding: 10px;
+         font-size: 24px;
+         }
+      </style>
+   </header>
+   <body>
+      <div>
+         <!-- Input for Wikipedia page -->
+         <input list="wikipediaSuggestions" type="text" id="wikipediaInput" placeholder="Enter Wikipedia page">
+         <datalist id="wikipediaSuggestions"></datalist>
+         <button id="wikipediaButton">Change Wikipedia Page</button>
+      </div>
+      <div>
+         <!-- Dropdown for video selection -->
+         <select id="videoDropdown">
+            <option value="eRXE8Aebp7s" selected>Subway Surfer</option>
+            <option value="JlPEb6WNuDI">Minecraft Parkour</option>
+            <!-- Add more options as needed -->
+         </select>
+      </div>
+      <div class="video-container">
+         <div class="video-frame">
+            <iframe id="videoPlayer" src="https://www.youtube.com/embed/eRXE8Aebp7s?autoplay=1&mute=1&loop=1&playlist=eRXE8Aebp7s" allow='autoplay' frameborder="0" allowfullscreen></iframe>
+         </div>
+         <div class="overlay">
+            <textarea class="textbox" id="wikiText" placeholder="Loading Wikipedia data..."></textarea>
+         </div>
+      </div>
+      </div>
+      <!-- Slider for speed adjustment -->
+      <input type="range" min="0.1" max="5" value="1" step="0.1" id="speedSlider">
+      <label for="speedSlider">Speed Adjustment: <span id="speedDisplay">1</span>x</label>
+      <!-- Controls for pause/resume, go back and go forward -->
+      <button id="pauseButton">Pause</button>
+      <button id="backButton">Back</button>
+      <button id="forwardButton">Forward</button>
+      <script>
+         // get references to the new controls
+         let wikipediaInput = document.getElementById('wikipediaInput');
+         let wikipediaButton = document.getElementById('wikipediaButton');
+         let videoDropdown = document.getElementById('videoDropdown');
+         
+         let wikipediaSuggestions = document.getElementById('wikipediaSuggestions');
+         
+         wikipediaInput.addEventListener('input', function() {
+             let searchQuery = this.value;
+             if (searchQuery.length > 2) { // Only search when the input is 3 or more characters
+                 fetch(`https://en.wikipedia.org/w/api.php?action=opensearch&search=${searchQuery}&limit=5&origin=*&format=json`)
+                     .then(response => response.json())
+                     .then(data => {
+                         let titles = data[1]; // The second item in the returned array is the titles
+                         wikipediaSuggestions.innerHTML = ''; // Clear the current suggestions
+                         titles.forEach(title => {
+                             // Create a new option for each suggestion
+                             let option = document.createElement('option');
+                             option.value = title;
+                             wikipediaSuggestions.appendChild(option);
+                         });
+                     });
+             }
+         });
+         
+         // update the wikipedia page when the button is clicked
+         wikipediaButton.addEventListener('click', function() {
+             let newPage = wikipediaInput.value;
+             if (newPage) {
+                 // update the wikipedia URL
+                 url = `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&format=json&exintro=&titles=${newPage}&origin=*`;
+         
+                 // reset the text box
+                 chunks = [];
+                 index = 0;
+         
+                 fetchAndDisplayText(); // re-fetch and display the text
+             }
+         });
+         
+         // update the video when the dropdown is changed
+         videoDropdown.addEventListener('change', function() {
+             let newVideoId = this.value;
+             if (newVideoId) {
+                 // update the video URL
+                 let videoPlayer = document.getElementById('videoPlayer');
+                 videoPlayer.src = `https://www.youtube.com/embed/${newVideoId}?autoplay=1&mute=1&loop=1&playlist=${newVideoId}`;
+             }
+         });
+         
+         let speed = 1; // Initial speed
+         let timer;
+         let paused = false;
+         
+         // Listen for mouse up event to the speed slider
+         document.getElementById('speedSlider').addEventListener('mouseup', function(e) {
+             speed = e.target.value;
+             document.getElementById('speedDisplay').innerText = speed;
+             if (timer) {
+                 clearTimeout(timer);
+                 updateText(); // Start the loop with the new speed
+             }
+         });
+         
+         let chunks = [];
+         let index = 0;
+         
+         document.getElementById('pauseButton').addEventListener('click', function() {
+             if (paused) {
+                 // if paused, resume
+                 paused = false;
+                 this.innerText = 'Pause';
+                 updateText();
+             } else {
+                 // if not paused, pause
+                 paused = true;
+                 this.innerText = 'Resume';
+                 if (timer) clearTimeout(timer);
+             }
+         });
+         
+         document.getElementById('backButton').addEventListener('click', function() {
+             // go back a section
+             index = Math.max(0, index - 2); // -2 because updateText increments index
+             updateText();
+         });
+         
+         document.getElementById('forwardButton').addEventListener('click', function() {
+             // go forward a section
+             updateText();
+         });
+         
+         function updateText() {
+             if (timer) clearTimeout(timer); // clear any existing timer
+         
+             if(index >= chunks.length) index = 0; // reset index if it exceeds chunks array length
+             let textBox = document.getElementById('wikiText');
+             textBox.value = chunks[index];
+             autoResize(textBox); // resize textbox to fit content
+         
+             // Every chunk should display for approximately 5 seconds at 1x speed
+             if (!paused) {
+                 let duration = 5000 / speed;
+                 timer = setTimeout(updateText, duration);
+             }
+         
+             index++;
+         }
+         
+         function autoResize(element) {
+             element.style.height = 'auto';
+             element.style.height = (element.scrollHeight) + 'px';
+         }
+         
+         // wrap the fetch and text display logic in a function so it can be called again
+         function fetchAndDisplayText() {
+             fetch(url)
+             .then(response => response.json())
+             .then(data => {
+                 let pages = data.query.pages;
+                 let page = Object.values(pages)[0]; // get the first (and only) page
+                 let text = page.extract;
+         
+                 let parser = new DOMParser();
+                 let htmlDoc = parser.parseFromString(text, 'text/html');
+                 let paragraphs = Array.from(htmlDoc.getElementsByTagName('p'));
+         
+                 // Filter out empty paragraphs and convert HTMLParagraphElement objects to plain text
+                 paragraphs = paragraphs.map(paragraph => paragraph.textContent).filter(text => text.trim().length > 0);
+         
+                 // Break up paragraphs into smaller text chunks of approximately 5 seconds' reading each (at 1x speed)
+                 paragraphs.forEach(para => {
+                     let sentences = para.split('.');
+                     sentences.forEach(sentence => {
+                         let words = sentence.split(' ');
+                         while (words.length) {
+                             let chunk = words.splice(0, 16.65).join(' ');
+                             if (chunk.trim()) chunks.push(chunk.trim());
+                         }
+                     });
+                 });
+         
+                 updateText(); // Start the loop
+             });
+         }
+         
+         // call the function to start the process
+         fetchAndDisplayText();
+      </script>
+   </body>
+</html>
