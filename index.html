@@ -59,13 +59,13 @@
             position: relative;
             overflow: hidden;
             width: 100%;
-            padding-top: 75%;
+            padding-top: 141.42%; /* Maintain 1:1.77 aspect ratio */
         }
 
         @media (max-width: 767px) {
             .video-container {
-                height: 100vh;
-                padding-top: 0;
+                height: 0;
+                padding-top: 177.78%; /* 16:9 aspect ratio for mobile screens */
             }
         }
 
@@ -104,7 +104,7 @@
             padding: 10px;
             font-size: 18px;
             font-weight: 500;
-            font-family: "Comic Sans MS", "Comic Sans", cursive;
+            font-family: "Comic Sans MS", "Comic Sans";
             border: 0px solid #ddd;
             background-color: transparent;
             color: red;
